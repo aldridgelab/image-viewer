@@ -1,0 +1,10 @@
+__pycache__/
+.venv/
+.pytest_cache/
+node_modules/
+build/
+dist/
+*.dmg
+*.spec
+viewer_config.json
+.DS_Store
