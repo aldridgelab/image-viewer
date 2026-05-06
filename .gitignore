@@ -4,6 +4,7 @@ __pycache__/
 node_modules/
 build/
 dist/
+assets/*.iconset/
 *.dmg
 *.spec
 viewer_config.json

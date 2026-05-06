@@ -38,6 +38,12 @@ This launches the viewer in a pywebview desktop window. If `frontend/dist/index.
 
 This builds the production frontend, bundles the app with PyInstaller, and writes `dist/Aldridge Lab Image Viewer.app` plus `dist/AldridgeLabImageViewer-v1.0.0.dmg`. The generated app is unsigned; clean external distribution still needs Apple Developer signing and notarization.
 
+```bash
+uv run python scripts/generate_app_icon.py --output-dir assets
+```
+
+This regenerates the app icon assets. The default icon is an `A` built from rod-shaped bacteria and writes `assets/app-icon.png` plus `assets/app-icon.icns`.
+
 ## Browsing
 
 Grid cards render the configured default channel with linear 8-bit conversion so fluorescence intensity comparisons are not normalized per image. The toolbar can switch the grid to RGB composite mode and map detected channels into red, green, and blue. Holding `Z` while hovering over a grid card shows every channel for that TIFF.
@@ -62,6 +68,7 @@ Useful environment variables:
 - `IMAGE_VIEWER_DESKTOP_PORT`: local backend port, default `0` for an available port.
 - `IMAGE_VIEWER_LOG_LEVEL`: Uvicorn log level for the desktop backend.
 - `IMAGE_VIEWER_APP_VERSION`: package filename version override, default `1.0.0`.
+- `IMAGE_VIEWER_ICON_PATH`: macOS `.icns` file to use for packaging, default `assets/app-icon.icns`.
 
 ## API Summary
 
@@ -90,4 +97,5 @@ npm run build
 cd ..
 uv run python -m image_viewer.desktop --check
 bash -n scripts/start_desktop.sh scripts/package_app.sh
+uv run python scripts/generate_app_icon.py --output-dir assets
 ```

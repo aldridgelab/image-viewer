@@ -7,6 +7,7 @@ APP_NAME="${IMAGE_VIEWER_APP_NAME:-Aldridge Lab Image Viewer}"
 DMG_NAME="${IMAGE_VIEWER_DMG_NAME:-AldridgeLabImageViewer-v$APP_VERSION}"
 DIST_DIR="$ROOT_DIR/dist"
 FRONTEND_DIST="$ROOT_DIR/frontend/dist"
+ICON_PATH="${IMAGE_VIEWER_ICON_PATH:-$ROOT_DIR/assets/app-icon.icns}"
 STAGE_DIR="$DIST_DIR/dmg-stage"
 DMG_PATH="$DIST_DIR/$DMG_NAME.dmg"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
@@ -35,10 +36,20 @@ if [[ ! -f "$FRONTEND_DIST/index.html" ]]; then
   exit 1
 fi
 
+if [[ -z "${IMAGE_VIEWER_ICON_PATH:-}" ]]; then
+  uv run python "$ROOT_DIR/scripts/generate_app_icon.py" --output-dir "$ROOT_DIR/assets"
+fi
+
+if [[ ! -f "$ICON_PATH" ]]; then
+  echo "App icon missing at $ICON_PATH." >&2
+  exit 1
+fi
+
 uv run pyinstaller \
   --noconfirm \
   --clean \
   --windowed \
+  --icon "$ICON_PATH" \
   --name "$APP_NAME" \
   --osx-bundle-identifier "edu.aldridgelab.imageviewer" \
   --distpath "$DIST_DIR" \

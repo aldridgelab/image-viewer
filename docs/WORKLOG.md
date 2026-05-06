@@ -1,5 +1,33 @@
 # Worklog
 
+## 2026-05-06 - Bacteria A App Icon
+
+**What changed**
+- Added a generated `A` app icon built from rod-shaped bacteria.
+- Added `assets/app-icon.png` for preview and `assets/app-icon.icns` for macOS packaging.
+- Added `scripts/generate_app_icon.py` so the icon can be regenerated from source geometry.
+- Updated `scripts/package_app.sh` to regenerate and use the default `.icns` icon, with `IMAGE_VIEWER_ICON_PATH` available for overrides.
+
+**Why**
+- Give the desktop app a lab-specific icon instead of the default PyInstaller icon.
+
+**How to verify**
+```bash
+cd /Users/jwhite22/Documents/aldridge-multiomics/image-viewer
+uv run python scripts/generate_app_icon.py --output-dir assets
+bash -n scripts/start_desktop.sh scripts/package_app.sh
+uv run pytest
+cd frontend
+npm run lint
+npm run build
+cd ..
+./scripts/package_app.sh
+"dist/Aldridge Lab Image Viewer.app/Contents/MacOS/Aldridge Lab Image Viewer" --check
+```
+
+**Follow-ups / TODOs**
+- Add Apple Developer codesigning and notarization if the `.dmg` will be distributed outside trusted/internal machines.
+
 ## 2026-05-06 - v1.0.0 Release Branding
 
 **What changed**

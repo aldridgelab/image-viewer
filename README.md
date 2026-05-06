@@ -63,6 +63,7 @@ Desktop environment overrides:
 - `IMAGE_VIEWER_DESKTOP_HOST`: local backend host, default `127.0.0.1`.
 - `IMAGE_VIEWER_DESKTOP_PORT`: local backend port, default `0` for an available port.
 - `IMAGE_VIEWER_APP_VERSION`: package filename version override, default `1.0.0`.
+- `IMAGE_VIEWER_ICON_PATH`: macOS `.icns` file to use for packaging, default `assets/app-icon.icns`.
 
 ## Common Workflows
 
@@ -114,12 +115,19 @@ Build the macOS desktop package:
 ./scripts/package_app.sh
 ```
 
+Regenerate the app icon assets:
+
+```bash
+uv run python scripts/generate_app_icon.py --output-dir assets
+```
+
 ## Outputs
 
 - `viewer_config.json`: saved local viewer configuration.
 - `~/Library/Application Support/Image Viewer/viewer_config.json`: saved desktop viewer configuration.
 - `<viewer_dir>/favorites/`: copied favorite TIFF files.
 - `frontend/dist/`: production frontend build from `npm run build`.
+- `assets/app-icon.png` and `assets/app-icon.icns`: generated AL bacteria app icon assets.
 - `dist/Aldridge Lab Image Viewer.app`: packaged macOS app bundle.
 - `dist/AldridgeLabImageViewer-v1.0.0.dmg`: distributable macOS disk image.
 - Browser downloads: current-view PNGs and contact-sheet PNGs.
