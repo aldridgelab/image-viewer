@@ -12,6 +12,8 @@ STAGE_DIR="$DIST_DIR/dmg-stage"
 DMG_PATH="$DIST_DIR/$DMG_NAME.dmg"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 
+export PYINSTALLER_CONFIG_DIR="${PYINSTALLER_CONFIG_DIR:-$ROOT_DIR/build/pyinstaller-cache}"
+
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "macOS packaging requires hdiutil and must be run on macOS." >&2
   exit 1
@@ -36,7 +38,7 @@ if [[ ! -f "$FRONTEND_DIST/index.html" ]]; then
   exit 1
 fi
 
-if [[ -z "${IMAGE_VIEWER_ICON_PATH:-}" ]]; then
+if [[ ! -f "$ICON_PATH" && -z "${IMAGE_VIEWER_ICON_PATH:-}" ]]; then
   uv run python "$ROOT_DIR/scripts/generate_app_icon.py" --output-dir "$ROOT_DIR/assets"
 fi
 
