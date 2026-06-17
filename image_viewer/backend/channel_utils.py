@@ -1,4 +1,4 @@
-"""Channel naming and resolution helpers for TIFF viewer APIs."""
+"""Channel naming and resolution helpers for microscopy viewer APIs."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Sequence
 
+import czifile
 import tifffile
 
 DEFAULT_CHANNEL_NAMES: tuple[str, ...] = ("Phase", "HADA", "Bodipy")
@@ -74,6 +75,43 @@ def _extract_imagej_labels(imagej_metadata: dict | None) -> list[str]:
     return output
 
 
+def _local_xml_name(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
+def _extract_czi_channel_names(metadata_xml: str) -> list[str]:
+    try:
+        root = ET.fromstring(metadata_xml)
+    except ET.ParseError:
+        return []
+
+    indexed_names: dict[int, str] = {}
+    fallback_names: list[str] = []
+    for element in root.iter():
+        if _local_xml_name(element.tag) != "Channel":
+            continue
+        name = element.attrib.get("Name", "").strip()
+        if not name:
+            continue
+
+        channel_id = element.attrib.get("Id", "")
+        if channel_id.startswith("Channel:"):
+            try:
+                channel_index = int(channel_id.split(":", 1)[1])
+            except ValueError:
+                channel_index = -1
+            if channel_index >= 0:
+                indexed_names.setdefault(channel_index, name)
+                continue
+
+        if name not in fallback_names:
+            fallback_names.append(name)
+
+    if indexed_names:
+        return [name for _, name in sorted(indexed_names.items())]
+    return fallback_names
+
+
 def _extract_json_description_names(description: str | None) -> list[str]:
     if not description:
         return []
@@ -91,25 +129,43 @@ def _extract_json_description_names(description: str | None) -> list[str]:
     return []
 
 
-def suggest_channel_names_from_tiff(path: Path, channel_count: int) -> tuple[list[str], str]:
-    """Suggest channel names from TIFF metadata, falling back to defaults."""
+def _suggest_channel_names_from_tiff(path: Path) -> list[str]:
+    with tifffile.TiffFile(str(path)) as tif:
+        if tif.ome_metadata:
+            ome_names = _extract_ome_channel_names(tif.ome_metadata)
+            if ome_names:
+                return ome_names
+
+        imagej_names = _extract_imagej_labels(tif.imagej_metadata)
+        if imagej_names:
+            return imagej_names
+
+        description = tif.pages[0].description if tif.pages else None
+        return _extract_json_description_names(description)
+
+
+def _suggest_channel_names_from_czi(path: Path) -> list[str]:
+    with czifile.CziFile(str(path)) as czi:
+        metadata = czi.metadata()
+    if isinstance(metadata, str):
+        return _extract_czi_channel_names(metadata)
+    return []
+
+
+def suggest_channel_names_from_image(path: Path, channel_count: int) -> tuple[list[str], str]:
+    """Suggest channel names from image metadata, falling back to defaults."""
     defaults = default_channel_names(channel_count)
     try:
-        with tifffile.TiffFile(str(path)) as tif:
-            if tif.ome_metadata:
-                ome_names = _extract_ome_channel_names(tif.ome_metadata)
-                if ome_names:
-                    return normalize_channel_names(ome_names, channel_count), "metadata"
-
-            imagej_names = _extract_imagej_labels(tif.imagej_metadata)
-            if imagej_names:
-                return normalize_channel_names(imagej_names, channel_count), "metadata"
-
-            description = tif.pages[0].description if tif.pages else None
-            description_names = _extract_json_description_names(description)
-            if description_names:
-                return normalize_channel_names(description_names, channel_count), "metadata"
+        if path.suffix.lower() == ".czi":
+            metadata_names = _suggest_channel_names_from_czi(path)
+        else:
+            metadata_names = _suggest_channel_names_from_tiff(path)
+        if metadata_names:
+            return normalize_channel_names(metadata_names, channel_count), "metadata"
     except Exception:
         pass
 
     return defaults, "default"
+
+
+suggest_channel_names_from_tiff = suggest_channel_names_from_image

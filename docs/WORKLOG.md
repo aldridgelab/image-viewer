@@ -1,5 +1,29 @@
 # Worklog
 
+## 2026-06-17 - CZI Image Support
+
+**What changed**
+- Added `.czi` discovery alongside `.tif` and `.tiff` files with a default `*.tif;*.tiff;*.czi` pattern.
+- Added CZI stack reading through `czifile`, preserving the existing channel rendering, RGB composite, metadata, and favorite workflows.
+- Added CZI channel-name extraction from display metadata when available.
+- Updated user-facing setup text and docs from TIFF-only to TIFF/CZI image support.
+- Bumped the app release version to `1.1.0`.
+
+**Why**
+- Let Aldridge Lab image sets acquired as Zeiss CZI files open directly in the viewer without conversion to TIFF.
+
+**How to verify**
+```bash
+cd /Users/jwhite22/Documents/aldridge-multiomics/image-viewer
+uv run pytest
+cd frontend
+npm run lint
+npm run build
+```
+
+**Follow-ups / TODOs**
+- If future CZI datasets use scenes, mosaics, or pyramids that `czifile` cannot flatten cleanly, evaluate a heavier bioimaging reader such as AICSImageIO.
+
 ## 2026-05-06 - Bacteria A App Icon
 
 **What changed**

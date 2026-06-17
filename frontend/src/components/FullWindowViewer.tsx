@@ -338,7 +338,7 @@ export function FullWindowViewer({
   ]);
 
   return (
-    <section className="detail-shell" aria-label="Selected TIFF image">
+    <section className="detail-shell" aria-label="Selected image">
       <div className="detail-toolbar">
         <div className="detail-toolbar__left">
           <button

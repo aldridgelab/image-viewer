@@ -33,6 +33,8 @@ import { SetupPanel } from './SetupPanel';
 import { ZoomPopup } from './ZoomPopup';
 import { APP_VERSION } from '../version';
 
+const DEFAULT_FILE_PATTERN = '*.tif;*.tiff;*.czi';
+
 function clampChannel(channel: number, totalChannels: number): number {
   if (totalChannels <= 0) {
     return 0;
@@ -63,7 +65,7 @@ export function ImageViewerApp() {
   const [showSetup, setShowSetup] = useState(false);
 
   const [directory, setDirectory] = useState('');
-  const [pattern, setPattern] = useState('*.tif');
+  const [pattern, setPattern] = useState(DEFAULT_FILE_PATTERN);
   const [channelNames, setChannelNames] = useState<string[]>([]);
   const [defaultChannel, setDefaultChannel] = useState(0);
   const [inspectResult, setInspectResult] = useState<ViewerInspectResponse | null>(null);
@@ -137,7 +139,7 @@ export function ImageViewerApp() {
         return response.items.find((item) => item.id === current.id) ?? current;
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load TIFF files');
+      setError(err instanceof Error ? err.message : 'Failed to load image files');
     } finally {
       setIsLoading(false);
     }
@@ -183,7 +185,7 @@ export function ImageViewerApp() {
     try {
       const result = await inspectViewerDir({
         directory: directory.trim(),
-        pattern: pattern.trim() || '*.tif',
+        pattern: pattern.trim() || DEFAULT_FILE_PATTERN,
       });
       setInspectResult(result);
       const names = detectedNamesFor(result);
@@ -198,7 +200,7 @@ export function ImageViewerApp() {
 
   const handleApply = useCallback(async () => {
     if (!inspectResult || inspectResult.total_images === 0) {
-      setError('Inspect a directory with TIFF files before applying.');
+      setError('Inspect a directory with TIFF or CZI files before applying.');
       return;
     }
     if (channelNames.some((name) => !name.trim())) {
@@ -211,7 +213,7 @@ export function ImageViewerApp() {
     try {
       const viewerConfig = await setViewerConfig({
         viewer_dir: directory.trim(),
-        viewer_pattern: pattern.trim() || '*.tif',
+        viewer_pattern: pattern.trim() || DEFAULT_FILE_PATTERN,
         viewer_channel_names: channelNames,
         viewer_default_channel: clampChannel(defaultChannel, channelNames.length),
       });
@@ -263,7 +265,7 @@ export function ImageViewerApp() {
       setChannelNames([]);
       setDefaultChannel(0);
       setDirectory('');
-      setPattern('*.tif');
+      setPattern(DEFAULT_FILE_PATTERN);
       setSelectedItem(null);
       setCacheKey((current) => current + 1);
     } catch (err) {
@@ -308,7 +310,7 @@ export function ImageViewerApp() {
       setTotal(response.total);
       setSelectedItem(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to shuffle TIFF files');
+      setError(err instanceof Error ? err.message : 'Failed to shuffle image files');
     } finally {
       setIsLoading(false);
     }
@@ -406,7 +408,7 @@ export function ImageViewerApp() {
           </div>
           <span className="brand-context">Image Viewer</span>
           <span className="brand-status">
-            {isConfigured ? `${total} TIFF files` : 'TIFF channel browser'}
+            {isConfigured ? `${total} image files` : 'TIFF/CZI channel browser'}
           </span>
         </div>
         <div className="header-actions">
@@ -505,14 +507,14 @@ export function ImageViewerApp() {
                 <EmptyState
                   icon={FolderOpen}
                   title="No Directory Configured"
-                  detail="Select a TIFF directory in setup."
+                  detail="Select a TIFF/CZI directory in setup."
                 />
               ) : isLoading && items.length === 0 ? (
-                <EmptyState icon={Loader2} title="Loading TIFF Files" spin />
+                <EmptyState icon={Loader2} title="Loading Image Files" spin />
               ) : items.length === 0 ? (
                 <EmptyState
                   icon={FolderOpen}
-                  title="No TIFF Files Found"
+                  title="No TIFF/CZI Files Found"
                   detail="Adjust the directory, pattern, or search filter."
                 />
               ) : (

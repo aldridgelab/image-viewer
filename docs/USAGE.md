@@ -2,13 +2,13 @@
 
 ## Pipeline Overview
 
-Inputs -> Inspect TIFF directory -> Configure channels -> Browse grid/composites -> Inspect full-window view -> Export PNGs/contact sheets -> Optional desktop package
+Inputs -> Inspect TIFF/CZI directory -> Configure channels -> Browse grid/composites -> Inspect full-window view -> Export PNGs/contact sheets -> Optional desktop package
 
 ## Directory Setup
 
-Use the setup panel to enter a local directory and file pattern. The default pattern is `*.tif`; `.tiff` files are supported when the pattern matches them, such as `*.tiff` or `*.tif*`.
+Use the setup panel to enter a local directory and file pattern. The default pattern is `*.tif;*.tiff;*.czi`, and multiple glob patterns can be separated with semicolons or commas.
 
-The backend reads the first matching TIFF to determine shape, axes, and channel count. It also checks OME-XML, ImageJ labels, and JSON image descriptions for channel names.
+The backend reads the first matching TIFF or CZI image to determine shape, axes, and channel count. It checks TIFF OME-XML/ImageJ/JSON metadata and CZI display metadata for channel names when available.
 
 ## Install Scripts
 
@@ -36,7 +36,7 @@ This launches the viewer in a pywebview desktop window. If `frontend/dist/index.
 ./scripts/package_app.sh
 ```
 
-This builds the production frontend, bundles the app with PyInstaller, and writes `dist/Aldridge Lab Image Viewer.app` plus `dist/AldridgeLabImageViewer-v1.0.0.dmg`. The generated app is unsigned; clean external distribution still needs Apple Developer signing and notarization.
+This builds the production frontend, bundles the app with PyInstaller, and writes `dist/Aldridge Lab Image Viewer.app` plus `dist/AldridgeLabImageViewer-v1.1.0.dmg`. The generated app is unsigned; clean external distribution still needs Apple Developer signing and notarization.
 
 ```bash
 uv run python scripts/generate_app_icon.py --output-dir assets
@@ -46,7 +46,7 @@ This regenerates the app icon assets. The default icon is an `A` built from rod-
 
 ## Browsing
 
-Grid cards render the configured default channel with linear 8-bit conversion so fluorescence intensity comparisons are not normalized per image. The toolbar can switch the grid to RGB composite mode and map detected channels into red, green, and blue. Holding `Z` while hovering over a grid card shows every channel for that TIFF.
+Grid cards render the configured default channel with linear 8-bit conversion so fluorescence intensity comparisons are not normalized per image. The toolbar can switch the grid to RGB composite mode and map detected channels into red, green, and blue. Holding `Z` while hovering over a grid card shows every channel for that image.
 
 Clicking a grid card opens the full-window viewer. The app header remains visible, and the selected image area provides channel controls, a channel thumbnail rail, favorite toggling, metadata, and previous/next image movement within the current filtered list.
 
@@ -58,7 +58,7 @@ Holding `Z` while hovering over a grid card shows a compact all-channel preview.
 
 ## Desktop App
 
-The desktop launcher starts the FastAPI backend on `127.0.0.1` with an available port, serves the built React app from the same process, and opens that local app inside a native pywebview window titled `Aldridge Lab - v1.0.0`.
+The desktop launcher starts the FastAPI backend on `127.0.0.1` with an available port, serves the built React app from the same process, and opens that local app inside a native pywebview window titled `Aldridge Lab - v1.1.0`.
 
 Useful environment variables:
 
@@ -67,7 +67,7 @@ Useful environment variables:
 - `IMAGE_VIEWER_DESKTOP_HOST`: local backend host, default `127.0.0.1`.
 - `IMAGE_VIEWER_DESKTOP_PORT`: local backend port, default `0` for an available port.
 - `IMAGE_VIEWER_LOG_LEVEL`: Uvicorn log level for the desktop backend.
-- `IMAGE_VIEWER_APP_VERSION`: package filename version override, default `1.0.0`.
+- `IMAGE_VIEWER_APP_VERSION`: package filename version override, default `1.1.0`.
 - `IMAGE_VIEWER_ICON_PATH`: macOS `.icns` file to use for packaging, default `assets/app-icon.icns`.
 
 ## API Summary
@@ -75,14 +75,14 @@ Useful environment variables:
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/health` | Backend health check |
-| `POST` | `/api/viewer/inspect` | Inspect a directory and sample TIFF |
+| `POST` | `/api/viewer/inspect` | Inspect a directory and sample TIFF/CZI image |
 | `GET` | `/api/viewer/config` | Read saved viewer config |
 | `POST` | `/api/viewer/config` | Save viewer config and refresh files |
-| `GET` | `/api/viewer/items` | List TIFF items with search/favorite filters |
+| `GET` | `/api/viewer/items` | List image items with search/favorite filters |
 | `GET` | `/api/viewer/image/{item_id}/{channel}` | Render a channel as PNG |
 | `GET` | `/api/viewer/composite/{item_id}` | Render RGB/composite channels as PNG |
 | `POST` | `/api/viewer/export/contact-sheet` | Export the current filtered list as a contact-sheet PNG |
-| `POST` | `/api/viewer/item/{item_id}/favorite` | Copy/remove favorite TIFF |
+| `POST` | `/api/viewer/item/{item_id}/favorite` | Copy/remove favorite TIFF/CZI file |
 | `POST` | `/api/viewer/refresh` | Refresh cached file list |
 | `POST` | `/api/viewer/clear` | Clear saved viewer config |
 

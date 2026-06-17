@@ -1,9 +1,10 @@
 [project]
 name = "image-viewer"
-version = "1.0.0"
-description = "Standalone TIFF channel image viewer for Aldridge multiomics data."
+version = "1.1.0"
+description = "Standalone TIFF/CZI channel image viewer for Aldridge multiomics data."
 requires-python = ">=3.11"
 dependencies = [
+    "czifile>=2019.7.2.3",
     "fastapi>=0.124.4",
     "imagecodecs>=2025.11.11",
     "numpy>=2.3.5",

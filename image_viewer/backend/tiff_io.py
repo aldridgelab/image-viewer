@@ -1,4 +1,4 @@
-"""TIFF reading, channel slicing, and browser PNG rendering helpers."""
+"""Microscopy image reading, channel slicing, and browser PNG rendering helpers."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional, Sequence
 
+import czifile
 import numpy as np
 import tifffile
 from fastapi import HTTPException
@@ -14,6 +15,9 @@ from PIL import Image
 
 IMAGE_PERCENTILE_LOW = 1
 IMAGE_PERCENTILE_HIGH = 99
+TIFF_SUFFIXES = (".tif", ".tiff")
+CZI_SUFFIXES = (".czi",)
+SUPPORTED_IMAGE_SUFFIXES = TIFF_SUFFIXES + CZI_SUFFIXES
 
 COLOR_MAP: dict[str, tuple[float, float, float]] = {
     "gray": (1.0, 1.0, 1.0),
@@ -30,7 +34,7 @@ COLOR_MAP: dict[str, tuple[float, float, float]] = {
 
 @dataclass(frozen=True)
 class TiffStack:
-    """A TIFF array plus axis metadata."""
+    """An image array plus axis metadata."""
 
     array: np.ndarray
     axes: str
@@ -61,13 +65,31 @@ def infer_axes(shape: tuple[int, ...], axes: Optional[str]) -> str:
     return "Q" * len(shape)
 
 
-def read_tiff_stack(path: Path) -> TiffStack:
+def _read_tiff_stack(path: Path) -> TiffStack:
     """Read the first TIFF series and keep enough axis metadata for channel slicing."""
     with tifffile.TiffFile(str(path)) as tif:
         series = tif.series[0]
         array = series.asarray()
         axes = infer_axes(tuple(array.shape), getattr(series, "axes", None))
     return TiffStack(array=np.asarray(array), axes=axes)
+
+
+def _read_czi_stack(path: Path) -> TiffStack:
+    """Read a CZI file into the same array/axes model used by image rendering."""
+    with czifile.CziFile(str(path)) as czi:
+        array = czi.asarray()
+        axes = infer_axes(tuple(array.shape), getattr(czi, "axes", None))
+    return TiffStack(array=np.asarray(array), axes=axes)
+
+
+def read_image_stack(path: Path) -> TiffStack:
+    """Read a supported microscopy image and keep axis metadata for channel slicing."""
+    suffix = path.suffix.lower()
+    if suffix in TIFF_SUFFIXES:
+        return _read_tiff_stack(path)
+    if suffix in CZI_SUFFIXES:
+        return _read_czi_stack(path)
+    raise HTTPException(status_code=400, detail=f"Unsupported image file type: {path.suffix}")
 
 
 def get_channel_axis(stack: TiffStack) -> Optional[int]:
@@ -120,7 +142,7 @@ def extract_channel(stack: TiffStack, channel: int) -> np.ndarray:
         axes = axes[:removable_axis] + axes[removable_axis + 1 :]
 
     if data.ndim != 2:
-        raise HTTPException(status_code=400, detail=f"Unable to render TIFF shape: {stack.array.shape}")
+        raise HTTPException(status_code=400, detail=f"Unable to render image shape: {stack.array.shape}")
     return np.asarray(data)
 
 
@@ -173,7 +195,7 @@ def linear_channel_to_uint8(channel: np.ndarray) -> np.ndarray:
 
 
 def render_channel(stack: TiffStack, channel: int, normalize: bool = True) -> np.ndarray:
-    """Render one channel from a TIFF stack as a 2D uint8 array."""
+    """Render one channel from an image stack as a 2D uint8 array."""
     channel_data = extract_channel(stack, channel)
     if normalize:
         return normalize_channel(channel_data)
@@ -237,9 +259,24 @@ def array_to_png_bytes(array: np.ndarray) -> bytes:
     return buffer.getvalue()
 
 
-def list_tiff_files(directory: Path, pattern: str) -> list[Path]:
-    return [
-        path
-        for path in sorted(directory.glob(pattern))
-        if path.is_file() and path.suffix.lower() in (".tif", ".tiff")
+def _split_glob_patterns(pattern: str) -> list[str]:
+    patterns = [
+        part.strip()
+        for semicolon_part in pattern.split(";")
+        for part in semicolon_part.split(",")
+        if part.strip()
     ]
+    return patterns or ["*"]
+
+
+def list_image_files(directory: Path, pattern: str) -> list[Path]:
+    seen: dict[Path, None] = {}
+    for glob_pattern in _split_glob_patterns(pattern):
+        for path in directory.glob(glob_pattern):
+            if path.is_file() and path.suffix.lower() in SUPPORTED_IMAGE_SUFFIXES:
+                seen[path] = None
+    return sorted(seen)
+
+
+read_tiff_stack = read_image_stack
+list_tiff_files = list_image_files

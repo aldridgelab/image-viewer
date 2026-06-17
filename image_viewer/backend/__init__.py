@@ -1,1 +1,1 @@
-"""Backend API for the standalone TIFF image viewer."""
+"""Backend API for the standalone TIFF/CZI image viewer."""

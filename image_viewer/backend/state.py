@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from pathlib import Path
 from typing import Optional
 
@@ -10,11 +11,16 @@ from fastapi import HTTPException
 
 from image_viewer.backend.channel_utils import normalize_channel_names
 from image_viewer.backend.models import DEFAULT_PATTERN
-from image_viewer.backend.tiff_io import get_stack_channel_count, read_tiff_stack
+from image_viewer.backend.tiff_io import (
+    SUPPORTED_IMAGE_SUFFIXES,
+    get_stack_channel_count,
+    list_image_files,
+    read_image_stack,
+)
 
 
 class ViewerState:
-    """Runtime state for configured TIFF browsing."""
+    """Runtime state for configured microscopy-image browsing."""
 
     def __init__(self) -> None:
         self.viewer_dir: Optional[Path] = None
@@ -24,6 +30,7 @@ class ViewerState:
         self.viewer_favorites_dir: Optional[Path] = None
         self._file_cache: list[Path] = []
         self._files_by_id: dict[str, Path] = {}
+        self._ids_by_path: dict[str, str] = {}
         self._file_info_cache: dict[str, dict[str, object]] = {}
 
     def clear(self) -> None:
@@ -34,29 +41,39 @@ class ViewerState:
         self.viewer_favorites_dir = None
         self._file_cache = []
         self._files_by_id = {}
+        self._ids_by_path = {}
         self._file_info_cache = {}
 
     def refresh_file_list(self) -> None:
         self._file_cache = []
         self._files_by_id = {}
+        self._ids_by_path = {}
         self._file_info_cache = {}
         if not self.viewer_dir or not self.viewer_dir.exists():
             return
 
-        for path in sorted(self.viewer_dir.glob(self.viewer_pattern)):
-            if path.suffix.lower() not in (".tif", ".tiff") or not path.is_file():
-                continue
+        paths: list[Path] = []
+        for path in list_image_files(self.viewer_dir, self.viewer_pattern):
             if self.viewer_favorites_dir:
                 try:
                     path.relative_to(self.viewer_favorites_dir)
                     continue
                 except ValueError:
                     pass
+            paths.append(path)
+
+        stem_counts = Counter(path.stem for path in paths)
+        for path in paths:
+            item_id = path.stem if stem_counts[path.stem] == 1 else path.name
             self._file_cache.append(path)
-            self._files_by_id.setdefault(path.stem, path)
+            self._files_by_id[item_id] = path
+            self._ids_by_path[str(path)] = item_id
 
     def get_files(self) -> list[Path]:
         return self._file_cache
+
+    def get_item_id(self, file_path: Path) -> str:
+        return self._ids_by_path.get(str(file_path), file_path.stem)
 
     def resolve_item_path(self, item_id: str) -> Path:
         if not self.viewer_dir:
@@ -78,7 +95,7 @@ class ViewerState:
         source_path = str(file_path)
         try:
             stat = file_path.stat()
-            stack = read_tiff_stack(file_path)
+            stack = read_image_stack(file_path)
             info: dict[str, object] = {
                 "source_path": source_path,
                 "shape": list(stack.array.shape),
@@ -104,7 +121,10 @@ class ViewerState:
     def is_favorite(self, item_id: str) -> bool:
         if not self.viewer_favorites_dir:
             return False
-        for ext in (".tif", ".tiff"):
+        path = self._files_by_id.get(item_id)
+        if path:
+            return (self.viewer_favorites_dir / path.name).exists()
+        for ext in SUPPORTED_IMAGE_SUFFIXES:
             if (self.viewer_favorites_dir / f"{item_id}{ext}").exists():
                 return True
         return False

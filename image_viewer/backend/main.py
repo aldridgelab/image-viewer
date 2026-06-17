@@ -1,4 +1,4 @@
-"""FastAPI backend for the standalone TIFF image viewer."""
+"""FastAPI backend for the standalone microscopy image viewer."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from image_viewer import __version__
 from image_viewer.backend.channel_utils import (
     default_channel_names,
     normalize_channel_names,
-    suggest_channel_names_from_tiff,
+    suggest_channel_names_from_image,
 )
 from image_viewer.backend.models import (
     DEFAULT_PATTERN,
@@ -42,8 +42,8 @@ from image_viewer.backend.state import (
 from image_viewer.backend.tiff_io import (
     array_to_png_bytes,
     get_stack_channel_count,
-    list_tiff_files,
-    read_tiff_stack,
+    list_image_files,
+    read_image_stack,
     render_channel,
     render_composite,
 )
@@ -75,7 +75,7 @@ _frontend_fallback_registered = False
 
 app = FastAPI(
     title="Image Viewer API",
-    description="Standalone TIFF channel viewer API.",
+    description="Standalone TIFF/CZI channel viewer API.",
     version=__version__,
 )
 
@@ -179,7 +179,9 @@ def _matching_viewer_files(search: Optional[str], favorites_only: bool) -> list[
 
     files = viewer_state.get_files()
     if favorites_only:
-        files = [path for path in files if viewer_state.is_favorite(path.stem)]
+        files = [
+            path for path in files if viewer_state.is_favorite(viewer_state.get_item_id(path))
+        ]
     if search:
         search_lower = search.lower()
         files = [path for path in files if search_lower in path.name.lower()]
@@ -191,11 +193,12 @@ def _viewer_item_from_path(file_path: Path) -> ViewerItem:
     dtype = info.get("dtype")
     file_size_bytes = info.get("file_size_bytes")
     modified_time = info.get("modified_time")
+    item_id = viewer_state.get_item_id(file_path)
     return ViewerItem(
-        id=file_path.stem,
+        id=item_id,
         filename=file_path.name,
         source_path=str(info.get("source_path") or file_path),
-        is_favorite=viewer_state.is_favorite(file_path.stem),
+        is_favorite=viewer_state.is_favorite(item_id),
         n_channels=int(info.get("n_channels", 0)),
         shape=list(info.get("shape", [])),
         dtype=str(dtype) if dtype else None,
@@ -212,7 +215,7 @@ def _render_item_array(
     composite_colors: Optional[list[str]],
     normalize: bool,
 ) -> object:
-    stack = read_tiff_stack(file_path)
+    stack = read_image_stack(file_path)
     if composite_channels is not None and composite_colors is not None:
         return render_composite(
             stack,
@@ -326,7 +329,7 @@ async def inspect_viewer_directory(request: ViewerInspectRequest) -> ViewerInspe
     if not directory.is_dir():
         raise HTTPException(status_code=400, detail=f"Path is not a directory: {request.directory}")
 
-    files = list_tiff_files(directory, request.pattern)
+    files = list_image_files(directory, request.pattern)
     if not files:
         return ViewerInspectResponse(
             total_images=0,
@@ -339,12 +342,12 @@ async def inspect_viewer_directory(request: ViewerInspectRequest) -> ViewerInspe
 
     sample_path = files[0]
     try:
-        stack = read_tiff_stack(sample_path)
+        stack = read_image_stack(sample_path)
         channel_count = get_stack_channel_count(stack)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to read sample image: {exc}") from exc
 
-    detected_names, source = suggest_channel_names_from_tiff(sample_path, channel_count)
+    detected_names, source = suggest_channel_names_from_image(sample_path, channel_count)
     return ViewerInspectResponse(
         total_images=len(files),
         sample_id=sample_path.stem,
@@ -420,7 +423,9 @@ async def get_viewer_items(
 
     files = viewer_state.get_files()
     if favorites_only:
-        files = [path for path in files if viewer_state.is_favorite(path.stem)]
+        files = [
+            path for path in files if viewer_state.is_favorite(viewer_state.get_item_id(path))
+        ]
     if search:
         search_lower = search.lower()
         files = [path for path in files if search_lower in path.name.lower()]
@@ -443,7 +448,7 @@ async def get_viewer_items(
 async def get_viewer_image(item_id: str, channel: int, normalize: bool = True) -> StreamingResponse:
     input_path = viewer_state.resolve_item_path(item_id)
     try:
-        stack = read_tiff_stack(input_path)
+        stack = read_image_stack(input_path)
         rendered = render_channel(stack, channel, normalize=normalize)
         png_bytes = array_to_png_bytes(rendered)
     except HTTPException:
@@ -486,7 +491,7 @@ async def get_viewer_composite(
         if not channel_indices:
             raise HTTPException(status_code=400, detail="At least one composite channel is required")
     try:
-        stack = read_tiff_stack(input_path)
+        stack = read_image_stack(input_path)
         rendered = render_composite(
             stack,
             channels=channel_indices,

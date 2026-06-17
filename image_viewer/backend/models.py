@@ -1,4 +1,4 @@
-"""Pydantic API models for the TIFF image viewer."""
+"""Pydantic API models for the microscopy image viewer."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel
 
-DEFAULT_PATTERN = "*.tif"
+DEFAULT_PATTERN = "*.tif;*.tiff;*.czi"
 
 
 class ViewerInspectRequest(BaseModel):

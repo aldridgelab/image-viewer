@@ -47,7 +47,7 @@ export function SetupPanel({
           <input
             value={directory}
             onChange={(event) => onDirectoryChange(event.target.value)}
-            placeholder="/path/to/tiff/files"
+            placeholder="/path/to/tiff-or-czi/files"
           />
         </label>
         <label>
@@ -55,7 +55,7 @@ export function SetupPanel({
           <input
             value={pattern}
             onChange={(event) => onPatternChange(event.target.value)}
-            placeholder="*.tif"
+            placeholder="*.tif;*.tiff;*.czi"
           />
         </label>
         <button

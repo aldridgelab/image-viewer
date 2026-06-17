@@ -1,11 +1,11 @@
 # Aldridge Lab Image Viewer
 
-Standalone TIFF image viewer for Aldridge Lab, released as v1.0.0. It scans a directory of `.tif` or `.tiff` files, renders individual channels, supports favorites, opens clicked images into a full-window channel viewer, and can run either in a browser during development or as a pywebview desktop app.
+Standalone TIFF/CZI image viewer for Aldridge Lab, released as v1.1.0. It scans a directory of `.tif`, `.tiff`, or `.czi` files, renders individual channels, supports favorites, opens clicked images into a full-window channel viewer, and can run either in a browser during development or as a pywebview desktop app.
 
 ## What It Does
 
-- Browses multi-channel TIFF stacks from a local directory.
-- Detects channel count and suggests channel names from TIFF metadata when available.
+- Browses multi-channel TIFF and CZI stacks from a local directory.
+- Detects channel count and suggests channel names from TIFF/CZI metadata when available.
 - Shows a grid thumbnail from the configured default channel, with hold-`Z` hover previews for all channels.
 - Opens any image into a full-window viewer with channel controls, zoom/pan, channel thumbnails, metadata, and image-to-image navigation.
 - Supports RGB composite rendering, per-channel brightness/contrast, normalization toggles, and PNG exports.
@@ -42,7 +42,7 @@ To build a macOS `.app` and `.dmg` for distribution:
 ./scripts/package_app.sh
 ```
 
-The package command writes `dist/Aldridge Lab Image Viewer.app` and `dist/AldridgeLabImageViewer-v1.0.0.dmg`.
+The package command writes `dist/Aldridge Lab Image Viewer.app` and `dist/AldridgeLabImageViewer-v1.1.0.dmg`.
 
 ## Configuration
 
@@ -50,8 +50,8 @@ The browser/dev server workflow stores viewer state in `viewer_config.json` at t
 
 Configuration fields:
 
-- `viewer_dir`: local directory containing TIFF files.
-- `viewer_pattern`: glob pattern for files, default `*.tif`.
+- `viewer_dir`: local directory containing TIFF/CZI files.
+- `viewer_pattern`: semicolon-separated glob pattern for files, default `*.tif;*.tiff;*.czi`.
 - `viewer_channel_names`: display labels for detected channels.
 - `viewer_default_channel`: zero-based channel index used for grid thumbnails.
 - `viewer_favorites_dir`: directory for favorite copies, default `<viewer_dir>/favorites`.
@@ -62,7 +62,7 @@ Desktop environment overrides:
 - `IMAGE_VIEWER_FRONTEND_DIST`: production frontend build path.
 - `IMAGE_VIEWER_DESKTOP_HOST`: local backend host, default `127.0.0.1`.
 - `IMAGE_VIEWER_DESKTOP_PORT`: local backend port, default `0` for an available port.
-- `IMAGE_VIEWER_APP_VERSION`: package filename version override, default `1.0.0`.
+- `IMAGE_VIEWER_APP_VERSION`: package filename version override, default `1.1.0`.
 - `IMAGE_VIEWER_ICON_PATH`: macOS `.icns` file to use for packaging, default `assets/app-icon.icns`.
 
 ## Common Workflows
@@ -125,15 +125,15 @@ uv run python scripts/generate_app_icon.py --output-dir assets
 
 - `viewer_config.json`: saved local viewer configuration.
 - `~/Library/Application Support/Image Viewer/viewer_config.json`: saved desktop viewer configuration.
-- `<viewer_dir>/favorites/`: copied favorite TIFF files.
+- `<viewer_dir>/favorites/`: copied favorite TIFF/CZI files.
 - `frontend/dist/`: production frontend build from `npm run build`.
 - `assets/app-icon.png` and `assets/app-icon.icns`: generated AL bacteria app icon assets.
 - `dist/Aldridge Lab Image Viewer.app`: packaged macOS app bundle.
-- `dist/AldridgeLabImageViewer-v1.0.0.dmg`: distributable macOS disk image.
+- `dist/AldridgeLabImageViewer-v1.1.0.dmg`: distributable macOS disk image.
 - Browser downloads: current-view PNGs and contact-sheet PNGs.
 
 ## Troubleshooting
 
 - Backend connection errors: confirm the backend is running on `127.0.0.1:8011`.
-- No files found: check that the directory exists and the pattern matches `.tif` or `.tiff` files.
+- No files found: check that the directory exists and the pattern matches `.tif`, `.tiff`, or `.czi` files.
 - Desktop issues: run `cd frontend && npm run build` if the frontend build is missing; local `.dmg` files are unsigned until an Apple Developer signing/notarization step is added.
